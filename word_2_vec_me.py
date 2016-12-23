@@ -1,3 +1,5 @@
+# -*- coding:utf-8 -*-
+
 """
 Train the skip-gram for word vectors
 """
@@ -33,6 +35,8 @@ class DataAgent(object):
 
 		# data_index, indicate the word we are process
 		self.data_index = 0
+
+		self.sampledTable = self.getSampleTable()
 
 	def extract_data(self,data_path,most_common_num):
 		with open(data_path,'r') as f:
@@ -88,6 +92,7 @@ class DataAgent(object):
 
 		assert batch_size % num_context_word_for_center_word == 0
 
+
 		batch = np.ndarray(shape=(batch_size),dtype = np.int32)
 		labels = np.ndarray(shape  = (batch_size,1), dtype = np.int32)
 
@@ -124,6 +129,49 @@ class DataAgent(object):
 			return batch,labels
 
 
+	def getSampleTable(self):
+		"""
+		we build the table for negative sampling in this function. We use the unigram and raise to power of 3/4 mentioned in Google's
+		Distributed representation of word vectors. 
+
+		Algo Descrition:
+			Suppose we have the data and frequency of each word, then we can say that a word will be sampled more likely if it has higher
+			frequency.
+		"""
+		wordCount = np.array(item[1] for item in self.count)
+		wordFrequency = wordCount/np.sum(wordCount)
+
+		wordFrequencyCum = np.cumsum(wordFrequency) * len(self.data)
+
+		sampledTable = [0]* len(self.data)
+
+		j = 0
+		for i in range(len(sampledTable)):
+			while i > wordFrequencyCum[j]:
+				j += 1
+
+			sampledTable[i] = j
+
+		return sampledTable
+
+	def negativeSample(self,K,target):
+		"""
+		get K negative sample which should not be equal to target
+		"""
+		avoid = [target]
+		for k in range(K):
+			candidate = self.sampledTable[np.random.randint(0,len(self.sampledTable)-1)]
+			while candidate in avoid:
+				candidate = self.sampledTable[np.random.randint(0,len(self.sampledTable)-1)]
+
+			avoid.append[candidate]
+		return avoid[1:]
+
+
+
+
+
+
 
 
 
@@ -137,18 +185,34 @@ class  Word2Vec(object):
 		self.data_agent = data_agent
 
 	def build_options():
+		self.vocabulary_size = 50000
 		self.batch_size = 128
 		self.embedding_size = 128
 		self.context_window = 1
 		self.num_context_word_for_center_word = 2
-
+		self.num_negative_samples = 2
 
 	def build_graph():
 		with tf.Graph():
 			batch = tf.placeholder(tf.int32,shape = [self.batch_size])
+
+			# we compress the word in the context and negative words together
 			labels = tf.placeholder(tf.int32,shape = [self.batch_size,1])
 
+			input_vectors = tf.Variable(tf.truncated_normal([self.vocabulary_size,self.embedding_size]))
+
+			output_vectors = tf.Variable(tf.truncated_normal([self.vocabulary_size,self.embedding_size]))
+
+			input_embed = tf.nn.embedding_lookup(input_vectors)
+
+
+
+
+
 			
+
+
+
 		
 
 		
